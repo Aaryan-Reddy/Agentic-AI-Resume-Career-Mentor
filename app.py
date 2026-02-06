@@ -38,21 +38,32 @@ if not st.session_state.ready:
                 f.write(resume.read())
                 docs = load_pdf(f.name)
 
-            # ✅ Read full resume text
+            # ✅ Full resume text
             resume_text = "\n".join([d.page_content for d in docs])
 
             vectorstore = build_vector_store(docs)
+
             st.session_state.vectorstore = vectorstore
             st.session_state.memory["resume_text"] = resume_text
 
             # ---------- AGENT PIPELINE ----------
-            p1, roles = role_selector_agent(resume_text, vectorstore, st.session_state.memory)
+            p1, roles = role_selector_agent(
+                resume_text,
+                vectorstore,
+                st.session_state.memory
+            )
             st.markdown(f"Role Selector Agent\n\n*{p1}*\n\n✅ Roles: {roles}")
 
-            p2, skills = current_skills_agent(resume_text, st.session_state.memory)
+            p2, skills = current_skills_agent(
+                resume_text,
+                st.session_state.memory
+            )
             st.markdown(f"Skill Extractor Agent\n\n*{p2}*\n\n✅ Skills Extracted")
 
-            p3, analysis = analyze_roles(st.session_state.memory)
+            p3, analysis = analyze_roles(
+                st.session_state.memory,
+                st.session_state.vectorstore
+            )
             st.markdown(f"Role Gap + Roadmap Agent\n\n*{p3}*\n\n✅ Analysis Ready")
 
             # ---------- FINAL REPORT ----------
@@ -64,7 +75,7 @@ if not st.session_state.ready:
 if st.session_state.ready:
 
     st.divider()
-    st.markdown("## 📌 Career Report")
+    st.markdown("## Career Report")
     st.markdown(st.session_state.analysis)
 
     st.divider()
@@ -78,13 +89,11 @@ if st.session_state.ready:
     question = st.chat_input("Ask a follow-up question...")
 
     if question:
-        # Add user message
         st.session_state.chat.append({"role": "user", "content": question})
 
         with st.chat_message("user"):
             st.markdown(question)
 
-        # Assistant reply
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 answer = chat_followup(
