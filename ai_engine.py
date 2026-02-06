@@ -32,7 +32,7 @@ You are a Role Selector Agent.
 
 {plan}
 
-Resume Context:
+Resume Evidence:
 {context}
 
 Task:
@@ -67,31 +67,40 @@ def current_skills_agent(resume_text, memory):
 
 
 # ==========================================================
-# AGENT 3: ROLE GAP + ROADMAP (LLM-BASED)
+# AGENT 3: ROLE GAP + ROADMAP (RAG GROUNDED)
 # ==========================================================
-def analyze_roles(memory):
+def analyze_roles(memory, vectorstore):
 
-    plan = "Plan: For each role → LLM finds true missing skills → roadmap → courses"
+    plan = "Plan: For each role → Retrieve resume evidence → Find missing skills → Roadmap → Courses"
 
     role_analysis = {}
 
     for role in memory["best_roles"]:
 
-        # ✅ LLM decides missing skills grounded in current skills
+        # ✅ RAG retrieval for THIS role
+        role_context = rag_query(
+            vectorstore,
+            f"{role} experience projects skills tools"
+        )
+
         gap_prompt = f"""
 You are a Skill Gap Agent.
 
-Role Target: {role}
+Target Role: {role}
+
+Resume Evidence (Retrieved Context):
+{role_context}
 
 Candidate Current Skills:
 {memory['current_skills']}
 
 Rules:
-- Do NOT repeat skills the candidate already has
-- Do NOT include vague skills like "Programming" or "Data Analysis"
-- Only suggest real missing skills that strengthen the candidate
-- Limit to 5–7 skills maximum
-- Return ONLY a comma-separated list of missing skills
+- Use resume evidence above (no generic assumptions)
+- Do NOT repeat skills candidate already has
+- Do NOT include vague skills like "Programming"
+- Suggest only real missing skills that strengthen profile
+- Limit to 5–7 skills max
+- Return ONLY comma-separated missing skills
 
 What are the missing skills for this role?
 """
@@ -179,7 +188,7 @@ Roles:
 Role Plans:
 {memory['role_analysis']}
 
-Resume Context:
+Resume Evidence:
 {context}
 
 User Question:
